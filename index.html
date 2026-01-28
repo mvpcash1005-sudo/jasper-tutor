@@ -42,7 +42,7 @@
         .btn-calc { background: linear-gradient(135deg, #2979ff, #1565c0); color: white; }
         
         /* 特殊分享按鈕 */
-        .btn-share { background: linear-gradient(135deg, #00c853, #b2ff59); color: #000; display: none; } /* 預設隱藏，支援才顯示 */
+        .btn-share { background: linear-gradient(135deg, #00c853, #b2ff59); color: #000; } 
         .btn-line-text { background: #06c755; color: white; }
 
         /* 訂單結果卡片 */
@@ -168,14 +168,14 @@
             
             <div class="action-group">
                 <button id="btnSmartShare" class="btn-action btn-share" onclick="smartShare()">
-                    1️⃣ 點此傳送 (自動複製文字)
+                    🚀 複製文字並傳送
                 </button>
-                <div id="pasteHint" style="display:none; color:#b2ff59; font-size:12px; text-align:center;">
-                    👆 點選 LINE 後，請在對話框按「貼上」
+                <div id="pasteHint" style="color:#b2ff59; font-size:12px; text-align:center;">
+                    👆 點擊後，請在 LINE 對話框長按「貼上」
                 </div>
 
-                <a href="#" id="lineLink" class="btn-action btn-line-text" target="_blank">
-                    💬 僅傳送文字 (照片需手動傳)
+                <a href="#" id="lineLink" class="btn-action btn-line-text" target="_blank" style="display:none;">
+                    💬 僅傳送文字 (舊版)
                 </a>
 
                 <a href="#" id="addFriendLink" target="_blank" style="text-align:center; color:#888; font-size:12px; text-decoration:underline;">
@@ -363,48 +363,57 @@
 我已閱讀規範，並準備好將題目照片傳送給老師。請提供付款帳號，謝謝！`;
 
             document.getElementById('addFriendLink').href = `https://line.me/ti/p/~${MY_LINE_ID}`;
-            document.getElementById('lineLink').href = `https://line.me/R/msg/text/?${encodeURIComponent(finalLineMsg)}`;
-
-            // 檢查是否支援分享
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], 'test.txt')] })) {
-                document.getElementById('btnSmartShare').style.display = 'block';
-                document.getElementById('pasteHint').style.display = 'block';
-                document.getElementById('lineLink').style.display = 'none';
-            } else {
-                document.getElementById('btnSmartShare').style.display = 'none';
-                document.getElementById('pasteHint').style.display = 'none';
-                document.getElementById('lineLink').style.display = 'block';
-            }
+            
+            // 強制顯示分享按鈕 (不再檢查支援度，而是點擊後才檢查)
+            document.getElementById('btnSmartShare').style.display = 'block';
+            document.getElementById('pasteHint').style.display = 'block';
+            document.getElementById('lineLink').style.display = 'none';
 
             const resultCard = document.getElementById('orderResult');
             resultCard.style.display = 'block';
             resultCard.scrollIntoView({behavior: "smooth"});
         }
 
-        // ================= 智慧分享 (複製+分享照片) =================
+        // ================= 智慧分享 (複製+分享照片+備案) =================
         async function smartShare() {
             const input = document.getElementById('qImages');
             const files = input.files;
             
-            // 1. 先複製文字
+            // 步驟1：先強制複製文字
             try {
-                await navigator.clipboard.writeText(finalLineMsg);
-                alert("✅ 預約單文字已複製！\n\n等下跳出 LINE 選擇傳送照片時，請順便在對話框長按「貼上」文字即可。");
+                // 創建一個臨時的 textarea 來複製，相容性更高
+                const textArea = document.createElement("textarea");
+                textArea.value = finalLineMsg;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                // 現代 API 備份
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(finalLineMsg);
+                }
             } catch (err) {
                 console.log("複製失敗", err);
             }
 
-            // 2. 接著分享照片 (不帶文字，避免被吃掉)
-            if (files.length > 0 && navigator.share) {
+            // 步驟2：檢查是否支援分享 API (Chrome/Safari)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], 'test.txt')] })) {
+                // 支援：跳出系統分享 (可選照片)
                 try {
                     await navigator.share({
                         files: Array.from(files)
                     });
                 } catch (error) {
-                    console.log('分享取消或失敗', error);
+                    // 使用者取消分享
+                    console.log('分享取消');
                 }
             } else {
-                alert("無法啟動分享，請手動傳送。");
+                // 不支援 (Messenger/Line/PC)：顯示提示並跳轉 LINE
+                alert("✅ 預約單文字已複製！\n\n因瀏覽器限制，無法直接帶入照片。\n\n請在接下來打開的 LINE 視窗中：\n1. 長按貼上文字\n2. 手動選取照片傳送");
+                
+                // 手動開啟 LINE
+                window.location.href = `https://line.me/ti/p/~${MY_LINE_ID}`;
             }
         }
 
