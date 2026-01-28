@@ -40,8 +40,11 @@
         button { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         button:active { transform: scale(0.98); }
         .btn-calc { background: linear-gradient(135deg, #2979ff, #1565c0); color: white; }
-        .btn-green { background: linear-gradient(135deg, #00e676, #00c853); color: #000; }
         
+        /* 特殊分享按鈕 */
+        .btn-share { background: linear-gradient(135deg, #00c853, #b2ff59); color: #000; display: none; } /* 預設隱藏，支援才顯示 */
+        .btn-line-text { background: #06c755; color: white; }
+
         /* 訂單結果卡片 */
         .price-card { background: #1e1e1e; border-radius: 12px; padding: 20px; margin-top: 20px; border: 1px solid #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); text-align: center; display: none; }
         .big-price { font-size: 48px; color: #00e676; font-weight: bold; margin: 15px 0; text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); }
@@ -50,11 +53,9 @@
         .detail-row:last-child { border-bottom: none; }
         .detail-val { font-weight: bold; color: #fff; }
 
-        /* LINE 按鈕 */
-        .line-btn-group { display: flex; gap: 10px; margin-top: 20px; }
-        .line-btn { flex: 1; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-        .btn-friend { background: #444; color: #ccc; border: 1px solid #666; }
-        .btn-send { background: #06c755; color: white; flex: 2; font-size: 16px; }
+        /* 按鈕群組 */
+        .action-group { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .btn-action { width: 100%; padding: 14px; border-radius: 8px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; }
 
         /* 警告文字 */
         .warning-box { background: #3e2723; color: #ffcc80; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 13px; text-align: left; line-height: 1.5; border-left: 4px solid #ff9800; }
@@ -162,15 +163,22 @@
             
             <div class="warning-box" style="background: #263238; border-color: #00e676;">
                 ✅ <b>預約單已建立！</b><br>
-                1. 請點擊下方綠色按鈕開啟 LINE。<br>
-                2. 傳送預約訊息。<br>
-                3. <b>手動傳送剛剛選擇的照片給老師。</b><br>
-                4. <b>老師確認收到款項後，即開始服務。</b>
+                請選擇以下方式傳送資料給老師：<br>
+                (若手機支援，建議使用綠色按鈕可一次傳送照片)
             </div>
             
-            <div class="line-btn-group">
-                <a href="#" id="addFriendLink" target="_blank" class="line-btn btn-friend">加好友</a>
-                <a href="#" id="lineLink" class="line-btn btn-send" target="_blank">傳送預約單</a>
+            <div class="action-group">
+                <button id="btnNativeShare" class="btn-action btn-share" onclick="shareToSystem()">
+                    ⚡ 啟動 LINE 傳送 (含照片)
+                </button>
+
+                <a href="#" id="lineLink" class="btn-action btn-line-text" target="_blank">
+                    💬 僅傳送預約文字 (照片需另傳)
+                </a>
+
+                <a href="#" id="addFriendLink" target="_blank" style="text-align:center; color:#888; font-size:12px; text-decoration:underline;">
+                    先加老師好友
+                </a>
             </div>
         </div>
     </div>
@@ -250,11 +258,7 @@
                 const pad = n => n < 10 ? '0'+n : n;
                 return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
             };
-            
-            // 設定開始時間為現在
             document.getElementById('startTime').value = format(now);
-            
-            // 設定結束時間預設為1小時後
             now.setHours(now.getHours() + 1);
             document.getElementById('endTime').value = format(now);
         }
@@ -297,6 +301,9 @@
             }
         }
 
+        // ================= 全域變數存訊息 =================
+        let finalLineMsg = "";
+
         // ================= 計算價格與驗證邏輯 =================
         function createOrder() {
             const name = document.getElementById('studentName').value;
@@ -321,21 +328,15 @@
             const diffMins = diffMs / 1000 / 60;
 
             if (diffMins < 40) {
-                return alert("⚠️ 時間設定錯誤！\n「希望收到解答時間」必須比「開始解題時間」晚至少 40 分鐘，以便老師有充裕時間解題。");
+                return alert("⚠️ 時間設定錯誤！\n「希望收到解答時間」必須比「開始解題時間」晚至少 40 分鐘。");
             }
 
             // 3. 價格計算
             let price = 0;
-            // 判斷學制 (透過 value 的前綴字元 p=國小, j=國中, s=高中)
             const stage = gradeVal.charAt(0); 
-            
-            if (stage === 'p') { // 國小
-                price = (serviceType === 'video') ? 300 : 100;
-            } else if (stage === 'j') { // 國中
-                price = (serviceType === 'video') ? 500 : 200;
-            } else if (stage === 's') { // 高中
-                price = (serviceType === 'video') ? 1000 : 500;
-            }
+            if (stage === 'p') price = (serviceType === 'video') ? 300 : 100;
+            else if (stage === 'j') price = (serviceType === 'video') ? 500 : 200;
+            else if (stage === 's') price = (serviceType === 'video') ? 1000 : 500;
 
             // 4. 更新 UI 結果
             document.getElementById('finalPrice').innerText = `$${price}`;
@@ -343,32 +344,71 @@
             document.getElementById('resGrade').innerText = `${gradeText} / ${subject}`;
             document.getElementById('resType').innerText = serviceTypeText;
             
-            // 格式化顯示時間 (取 HH:mm)
             const fmtTime = (d) => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
             document.getElementById('resTime').innerText = fmtTime(endDate);
 
-            // 5. 生成 LINE 訊息
-            const lineMsg = `🙋‍♂️ 我要預約解題服務
+            // 5. 生成訊息 (存入全域變數)
+            finalLineMsg = `我要預約解題服務
 ----------------
-👤 學生：${name}
-🎓 年級：${gradeText}
-📚 科目：${subject}
-🛠️ 模式：${serviceTypeText}
-💰 費用：$${price} (須先付款)
+學生：${name}
+年級：${gradeText}
+科目：${subject}
+模式：${serviceTypeText}
+費用：$${price} (須先付款)
 ----------------
-🕒 預定開始：${fmtTime(startDate)}
-🏁 希望完成：${fmtTime(endDate)}
-📄 題數：共 ${selectedFilesCount} 題
+預定開始：${fmtTime(startDate)}
+希望完成：${fmtTime(endDate)}
+題數：共 ${selectedFilesCount} 題
 ----------------
 我已閱讀規範，並準備好將題目照片傳送給老師。請提供付款帳號，謝謝！`;
 
+            // 設定連結
             document.getElementById('addFriendLink').href = `https://line.me/ti/p/~${MY_LINE_ID}`;
-            document.getElementById('lineLink').href = `https://line.me/R/msg/text/?${encodeURIComponent(lineMsg)}`;
+            document.getElementById('lineLink').href = `https://line.me/R/msg/text/?${encodeURIComponent(finalLineMsg)}`;
+
+            // 檢查是否支援分享 API
+            if (navigator.canShare && navigator.canShare({ files: [new File([], 'test.txt')] })) {
+                // 如果瀏覽器支援分享檔案 (大部分手機支援)
+                document.getElementById('btnNativeShare').style.display = 'block';
+                document.getElementById('lineLink').style.display = 'none'; // 隱藏舊按鈕
+            } else {
+                // 不支援 (如電腦版) -> 顯示舊按鈕
+                document.getElementById('btnNativeShare').style.display = 'none';
+                document.getElementById('lineLink').style.display = 'block';
+                document.getElementById('lineLink').innerHTML = "💬 傳送預約文字 (照片請手動另傳)";
+            }
 
             // 顯示並滑動
             const resultCard = document.getElementById('orderResult');
             resultCard.style.display = 'block';
             resultCard.scrollIntoView({behavior: "smooth"});
+        }
+
+        // ================= 新增：原生分享功能 (文字+圖片) =================
+        async function shareToSystem() {
+            const input = document.getElementById('qImages');
+            const files = input.files;
+
+            if (files.length === 0) return alert("沒有照片可以分享");
+
+            // 檢查瀏覽器是否支援分享
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '預約解題',
+                        text: finalLineMsg,
+                        files: Array.from(files)
+                    });
+                    console.log('分享成功');
+                } catch (error) {
+                    console.log('分享取消或失敗', error);
+                    alert("分享被取消，請改用下方文字按鈕，並手動傳照片。");
+                    document.getElementById('lineLink').style.display = 'block';
+                }
+            } else {
+                alert("您的瀏覽器不支援直接傳送照片，請改用下方文字按鈕。");
+                document.getElementById('lineLink').style.display = 'block';
+            }
         }
 
         // ================= 分頁切換 =================
