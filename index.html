@@ -163,17 +163,19 @@
             
             <div class="warning-box" style="background: #263238; border-color: #00e676;">
                 ✅ <b>預約單已建立！</b><br>
-                請選擇以下方式傳送資料給老師：<br>
-                (若手機支援，建議使用綠色按鈕可一次傳送照片)
+                為了確保老師收到照片，請依照下方步驟操作：
             </div>
             
             <div class="action-group">
-                <button id="btnNativeShare" class="btn-action btn-share" onclick="shareToSystem()">
-                    ⚡ 啟動 LINE 傳送 (含照片)
+                <button id="btnSmartShare" class="btn-action btn-share" onclick="smartShare()">
+                    1️⃣ 點此傳送 (自動複製文字)
                 </button>
+                <div id="pasteHint" style="display:none; color:#b2ff59; font-size:12px; text-align:center;">
+                    👆 點選 LINE 後，請在對話框按「貼上」
+                </div>
 
                 <a href="#" id="lineLink" class="btn-action btn-line-text" target="_blank">
-                    💬 僅傳送預約文字 (照片需另傳)
+                    💬 僅傳送文字 (照片需手動傳)
                 </a>
 
                 <a href="#" id="addFriendLink" target="_blank" style="text-align:center; color:#888; font-size:12px; text-decoration:underline;">
@@ -251,7 +253,6 @@
         // ================= 全局設定 =================
         const MY_LINE_ID = "love_ice_boy"; 
 
-        // 預設時間為當下
         function initTime() {
             const now = new Date();
             const format = (d) => {
@@ -301,7 +302,6 @@
             }
         }
 
-        // ================= 全域變數存訊息 =================
         let finalLineMsg = "";
 
         // ================= 計算價格與驗證邏輯 =================
@@ -362,61 +362,56 @@
 ----------------
 我已閱讀規範，並準備好將題目照片傳送給老師。請提供付款帳號，謝謝！`;
 
-            // 設定連結
             document.getElementById('addFriendLink').href = `https://line.me/ti/p/~${MY_LINE_ID}`;
             document.getElementById('lineLink').href = `https://line.me/R/msg/text/?${encodeURIComponent(finalLineMsg)}`;
 
-            // 檢查是否支援分享 API
-            if (navigator.canShare && navigator.canShare({ files: [new File([], 'test.txt')] })) {
-                // 如果瀏覽器支援分享檔案 (大部分手機支援)
-                document.getElementById('btnNativeShare').style.display = 'block';
-                document.getElementById('lineLink').style.display = 'none'; // 隱藏舊按鈕
+            // 檢查是否支援分享
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], 'test.txt')] })) {
+                document.getElementById('btnSmartShare').style.display = 'block';
+                document.getElementById('pasteHint').style.display = 'block';
+                document.getElementById('lineLink').style.display = 'none';
             } else {
-                // 不支援 (如電腦版) -> 顯示舊按鈕
-                document.getElementById('btnNativeShare').style.display = 'none';
+                document.getElementById('btnSmartShare').style.display = 'none';
+                document.getElementById('pasteHint').style.display = 'none';
                 document.getElementById('lineLink').style.display = 'block';
-                document.getElementById('lineLink').innerHTML = "💬 傳送預約文字 (照片請手動另傳)";
             }
 
-            // 顯示並滑動
             const resultCard = document.getElementById('orderResult');
             resultCard.style.display = 'block';
             resultCard.scrollIntoView({behavior: "smooth"});
         }
 
-        // ================= 新增：原生分享功能 (文字+圖片) =================
-        async function shareToSystem() {
+        // ================= 智慧分享 (複製+分享照片) =================
+        async function smartShare() {
             const input = document.getElementById('qImages');
             const files = input.files;
+            
+            // 1. 先複製文字
+            try {
+                await navigator.clipboard.writeText(finalLineMsg);
+                alert("✅ 預約單文字已複製！\n\n等下跳出 LINE 選擇傳送照片時，請順便在對話框長按「貼上」文字即可。");
+            } catch (err) {
+                console.log("複製失敗", err);
+            }
 
-            if (files.length === 0) return alert("沒有照片可以分享");
-
-            // 檢查瀏覽器是否支援分享
-            if (navigator.share) {
+            // 2. 接著分享照片 (不帶文字，避免被吃掉)
+            if (files.length > 0 && navigator.share) {
                 try {
                     await navigator.share({
-                        title: '預約解題',
-                        text: finalLineMsg,
                         files: Array.from(files)
                     });
-                    console.log('分享成功');
                 } catch (error) {
                     console.log('分享取消或失敗', error);
-                    alert("分享被取消，請改用下方文字按鈕，並手動傳照片。");
-                    document.getElementById('lineLink').style.display = 'block';
                 }
             } else {
-                alert("您的瀏覽器不支援直接傳送照片，請改用下方文字按鈕。");
-                document.getElementById('lineLink').style.display = 'block';
+                alert("無法啟動分享，請手動傳送。");
             }
         }
 
-        // ================= 分頁切換 =================
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
-            
             const index = tabName === 'booking' ? 0 : tabName === 'rules' ? 1 : 2;
             document.querySelectorAll('.nav-item')[index].classList.add('active');
         }
