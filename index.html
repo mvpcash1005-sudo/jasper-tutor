@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jasper 數理 - VIP 解題預約</title>
+    <style>
+        /* --- 視覺設計 (專業黑金風格) --- */
+        body { background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; padding-bottom: 80px; }
+        h2 { margin: 0; padding: 20px; text-align: center; background: #1e1e1e; color: #00e676; border-bottom: 1px solid #333; font-size: 20px; letter-spacing: 1px; }
+        
+        /* 底部導航 */
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: #1e1e1e; display: flex; border-top: 1px solid #333; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #888; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        .nav-item.active { color: #00e676; background: #252525; }
+        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+
+        /* 分頁內容 */
+        .tab-content { display: none; padding: 20px; animation: fadeIn 0.4s; max-width: 600px; margin: 0 auto; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 輸入欄位 */
+        label { color: #00e676; font-size: 14px; font-weight: bold; margin-bottom: 8px; display: block; margin-top: 15px; }
+        input, select, textarea { width: 100%; padding: 14px; background: #2c2c2c; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; margin-bottom: 5px; box-sizing: border-box; transition: 0.2s; outline: none; }
+        input:focus, select:focus { border-color: #00e676; background: #333; }
+        
+        /* 時間區塊 */
+        .time-group { display: flex; gap: 10px; }
+        .time-box { flex: 1; }
+        
+        /* 照片上傳區塊 */
+        .upload-area { border: 2px dashed #444; border-radius: 10px; padding: 20px; text-align: center; margin-top: 10px; cursor: pointer; transition: 0.3s; background: #1e1e1e; }
+        .upload-area:hover { border-color: #00e676; background: #252525; }
+        .upload-icon { font-size: 40px; color: #888; margin-bottom: 10px; }
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 15px; }
+        .preview-item { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; border: 1px solid #555; }
+
+        /* 按鈕 */
+        button { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        button:active { transform: scale(0.98); }
+        .btn-calc { background: linear-gradient(135deg, #2979ff, #1565c0); color: white; }
+        .btn-green { background: linear-gradient(135deg, #00e676, #00c853); color: #000; }
+        
+        /* 訂單結果卡片 */
+        .price-card { background: #1e1e1e; border-radius: 12px; padding: 20px; margin-top: 20px; border: 1px solid #333; box-shadow: 0 10px 20px rgba(0,0,0,0.3); text-align: center; display: none; }
+        .big-price { font-size: 48px; color: #00e676; font-weight: bold; margin: 15px 0; text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); }
+        
+        .detail-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; font-size: 14px; color: #ccc; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-val { font-weight: bold; color: #fff; }
+
+        /* LINE 按鈕 */
+        .line-btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .line-btn { flex: 1; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .btn-friend { background: #444; color: #ccc; border: 1px solid #666; }
+        .btn-send { background: #06c755; color: white; flex: 2; font-size: 16px; }
+
+        /* 警告文字 */
+        .warning-box { background: #3e2723; color: #ffcc80; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 13px; text-align: left; line-height: 1.5; border-left: 4px solid #ff9800; }
+        .status-badge { display: inline-block; padding: 4px 10px; background: #333; color: #00e676; border-radius: 20px; font-size: 12px; border: 1px solid #00e676; margin-bottom: 10px;}
+
+        /* 卡片樣式 */
+        .info-card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #2979ff; }
+        .info-header { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #fff; }
+        .info-content { color: #aaa; font-size: 14px; line-height: 1.6; }
+        
+        optgroup { color: #aaa; background: #1e1e1e; }
+    </style>
+</head>
+<body>
+
+    <h2 id="pageTitle">Jasper 數理 - VIP 解題預約</h2>
+
+    <div id="tab-booking" class="tab-content active">
+        <div style="text-align: center;">
+            <span class="status-badge">⚡ 線上快速解題系統</span>
+        </div>
+        
+        <label>👤 學生姓名</label>
+        <input type="text" id="studentName" placeholder="請輸入姓名">
+        
+        <label>🎓 選擇年級</label>
+        <select id="gradeLevel">
+            <optgroup label="國小部">
+                <option value="p1">國小一年級</option>
+                <option value="p2">國小二年級</option>
+                <option value="p3">國小三年級</option>
+                <option value="p4">國小四年級</option>
+                <option value="p5">國小五年級</option>
+                <option value="p6">國小六年級</option>
+            </optgroup>
+            <optgroup label="國中部">
+                <option value="j1">國中一年級</option>
+                <option value="j2">國中二年級</option>
+                <option value="j3">國中三年級</option>
+            </optgroup>
+            <optgroup label="高中部">
+                <option value="s1">高中一年級</option>
+                <option value="s2">高中二年級</option>
+                <option value="s3">高中三年級</option>
+            </optgroup>
+        </select>
+
+        <label>📚 選擇科目</label>
+        <select id="subject">
+            <option value="數學">數學</option>
+            <option value="理化">理化</option>
+            <option value="物理">物理</option>
+            <option value="化學">化學</option>
+            <option value="生物/自然">生物/自然</option>
+            <option value="英文">英文</option>
+            <option value="國文">國文</option>
+            <option value="社會">社會</option>
+        </select>
+
+        <label>🛠️ 解題方式 (1次5題)</label>
+        <select id="serviceType">
+            <option value="standard">圖文詳解 (一般)</option>
+            <option value="video">錄影解說 (加值服務)</option>
+        </select>
+
+        <label>🕒 預約時間設定</label>
+        <div class="warning-box" style="margin-top:0; margin-bottom:10px; background:#2c2c2c; border-left-color:#888; color:#aaa;">
+            ⚠️ 老師解題需要時間，預定與解答時間需間隔 <b>40分鐘</b> 以上。
+        </div>
+        
+        <div class="time-group">
+            <div class="time-box">
+                <div style="font-size:12px; color:#00e676; margin-bottom:4px;">開始解題時間</div>
+                <input type="datetime-local" id="startTime">
+            </div>
+            <div class="time-box">
+                <div style="font-size:12px; color:#2979ff; margin-bottom:4px;">希望收到解答</div>
+                <input type="datetime-local" id="endTime">
+            </div>
+        </div>
+
+        <label>📷 上傳題目 (上限 5 題)</label>
+        <div class="upload-area" onclick="document.getElementById('qImages').click()">
+            <div class="upload-icon">📸</div>
+            <div style="color:#aaa; font-size:14px;">點擊選擇照片<br><span style="font-size:12px; color:#666;">(請確認光線充足，字跡清晰)</span></div>
+        </div>
+        <input type="file" id="qImages" accept="image/*" multiple style="display:none;" onchange="handleFiles()">
+        
+        <div id="previewArea" class="preview-grid"></div>
+
+        <div class="warning-box" id="photoWarning" style="display:none;">
+            ⚠️ <b>注意：</b> 照片若模糊、反光，老師有權退回要求重拍。
+        </div>
+
+        <button class="btn-calc" onclick="createOrder()">📝 計算費用並預約</button>
+
+        <div id="orderResult" class="price-card">
+            <div style="color:#888; font-size:12px;">本次服務總額 (須先付款)</div>
+            <div class="big-price" id="finalPrice">$0</div>
+            
+            <div class="detail-row"><span>👤 學生</span><span class="detail-val" id="resName">--</span></div>
+            <div class="detail-row"><span>🎓 年級</span><span class="detail-val" id="resGrade">--</span></div>
+            <div class="detail-row"><span>🛠️ 模式</span><span class="detail-val" id="resType">--</span></div>
+            <div class="detail-row"><span>⏰ 期限</span><span class="detail-val" id="resTime">--</span></div>
+            
+            <div class="warning-box" style="background: #263238; border-color: #00e676;">
+                ✅ <b>預約單已建立！</b><br>
+                1. 請點擊下方綠色按鈕開啟 LINE。<br>
+                2. 傳送預約訊息。<br>
+                3. <b>手動傳送剛剛選擇的照片給老師。</b><br>
+                4. <b>老師確認收到款項後，即開始服務。</b>
+            </div>
+            
+            <div class="line-btn-group">
+                <a href="#" id="addFriendLink" target="_blank" class="line-btn btn-friend">加好友</a>
+                <a href="#" id="lineLink" class="line-btn btn-send" target="_blank">傳送預約單</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-rules" class="tab-content">
+        <div class="info-card" style="border-left-color: #ff3d00;">
+            <div class="info-header">🚫 NG 照片範例</div>
+            <div class="info-content">
+                ❌ <b>太遠/太小：</b> 老師看不清楚題目細節。<br>
+                ❌ <b>模糊/晃動：</b> 對焦失敗無法辨識。<br>
+                ❌ <b>嚴重反光：</b> 紙張反光遮住文字。<br>
+                ❌ <b>歪斜扭曲：</b> 請盡量從正上方平拍。
+            </div>
+        </div>
+        <div class="info-card" style="border-left-color: #00e676;">
+            <div class="info-header">✅ 完美照片指南</div>
+            <div class="info-content">
+                1. <b>光源充足：</b> 在檯燈或明亮處拍攝。<br>
+                2. <b>正面平拍：</b> 手機與紙張平行。<br>
+                3. <b>適當裁切：</b> 一張照片一題，去除不必要的背景。<br>
+                4. <b>檢查畫面：</b> 傳送前請自己先看一遍是否清晰。
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-info" class="tab-content">
+        <div class="radar-card info-card">
+            <div class="info-header" style="color:#ffcc00;">💰 收費標準 (1次5題)</div>
+            <div class="info-content">
+                <div style="margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px;">
+                    <b style="color:#fff;">🟢 國小部 (1-6年級)</b><br>
+                    • 圖文詳解：$100<br>
+                    • 錄影解說：$300
+                </div>
+                <div style="margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:5px;">
+                    <b style="color:#fff;">🔵 國中部 (1-3年級)</b><br>
+                    • 圖文詳解：$200<br>
+                    • 錄影解說：$500
+                </div>
+                <div>
+                    <b style="color:#fff;">🔴 高中部 (1-3年級)</b><br>
+                    • 圖文詳解：$500<br>
+                    • 錄影解說：$1000
+                </div>
+            </div>
+        </div>
+        <div class="radar-card info-card">
+            <div class="info-header" style="color:#2979ff;">⚠️ 服務須知</div>
+            <div class="info-content">
+                • <b>預約規則：</b> 提問時間與收件時間需間隔至少 40 分鐘。<br>
+                • <b>付款方式：</b> 支援轉帳 / Line Pay (請於 Line 中確認)。<br>
+                • <b>服務流程：</b> 傳題 -> 付款 -> 老師解題 -> 準時交卷。
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('booking')">
+            <div class="nav-icon">📝</div><div>預約解題</div>
+        </div>
+        <div class="nav-item" onclick="switchTab('rules')">
+            <div class="nav-icon">📷</div><div>拍照規範</div>
+        </div>
+        <div class="nav-item" onclick="switchTab('info')">
+            <div class="nav-icon">ℹ️</div><div>價目表</div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 全局設定 =================
+        const MY_LINE_ID = "love_ice_boy"; 
+
+        // 預設時間為當下
+        function initTime() {
+            const now = new Date();
+            const format = (d) => {
+                const pad = n => n < 10 ? '0'+n : n;
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+            
+            // 設定開始時間為現在
+            document.getElementById('startTime').value = format(now);
+            
+            // 設定結束時間預設為1小時後
+            now.setHours(now.getHours() + 1);
+            document.getElementById('endTime').value = format(now);
+        }
+        initTime();
+
+        // ================= 檔案處理邏輯 =================
+        let selectedFilesCount = 0;
+
+        function handleFiles() {
+            const input = document.getElementById('qImages');
+            const previewArea = document.getElementById('previewArea');
+            const files = input.files;
+            
+            if (files.length > 5) {
+                alert("⚠️ 一次最多只能上傳 5 題喔！請重新選擇。");
+                input.value = ""; 
+                previewArea.innerHTML = "";
+                document.getElementById('photoWarning').style.display = 'none';
+                selectedFilesCount = 0;
+                return;
+            }
+
+            previewArea.innerHTML = "";
+            selectedFilesCount = files.length;
+
+            if (selectedFilesCount > 0) {
+                document.getElementById('photoWarning').style.display = 'block';
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-item';
+                        previewArea.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                document.getElementById('photoWarning').style.display = 'none';
+            }
+        }
+
+        // ================= 計算價格與驗證邏輯 =================
+        function createOrder() {
+            const name = document.getElementById('studentName').value;
+            const gradeVal = document.getElementById('gradeLevel').value;
+            const gradeText = document.getElementById('gradeLevel').options[document.getElementById('gradeLevel').selectedIndex].text;
+            const subject = document.getElementById('subject').value;
+            const serviceType = document.getElementById('serviceType').value;
+            const serviceTypeText = document.getElementById('serviceType').options[document.getElementById('serviceType').selectedIndex].text;
+            
+            const startTimeStr = document.getElementById('startTime').value;
+            const endTimeStr = document.getElementById('endTime').value;
+
+            // 1. 基本資料驗證
+            if(!name) return alert("請輸入學生姓名");
+            if(selectedFilesCount === 0) return alert("請至少選擇一張題目照片");
+            if(!startTimeStr || !endTimeStr) return alert("請設定完整的預約時間");
+
+            // 2. 時間間隔驗證 (40分鐘)
+            const startDate = new Date(startTimeStr);
+            const endDate = new Date(endTimeStr);
+            const diffMs = endDate - startDate;
+            const diffMins = diffMs / 1000 / 60;
+
+            if (diffMins < 40) {
+                return alert("⚠️ 時間設定錯誤！\n「希望收到解答時間」必須比「開始解題時間」晚至少 40 分鐘，以便老師有充裕時間解題。");
+            }
+
+            // 3. 價格計算
+            let price = 0;
+            // 判斷學制 (透過 value 的前綴字元 p=國小, j=國中, s=高中)
+            const stage = gradeVal.charAt(0); 
+            
+            if (stage === 'p') { // 國小
+                price = (serviceType === 'video') ? 300 : 100;
+            } else if (stage === 'j') { // 國中
+                price = (serviceType === 'video') ? 500 : 200;
+            } else if (stage === 's') { // 高中
+                price = (serviceType === 'video') ? 1000 : 500;
+            }
+
+            // 4. 更新 UI 結果
+            document.getElementById('finalPrice').innerText = `$${price}`;
+            document.getElementById('resName').innerText = name;
+            document.getElementById('resGrade').innerText = `${gradeText} / ${subject}`;
+            document.getElementById('resType').innerText = serviceTypeText;
+            
+            // 格式化顯示時間 (取 HH:mm)
+            const fmtTime = (d) => `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+            document.getElementById('resTime').innerText = fmtTime(endDate);
+
+            // 5. 生成 LINE 訊息
+            const lineMsg = `🙋‍♂️ 我要預約解題服務
+----------------
+👤 學生：${name}
+🎓 年級：${gradeText}
+📚 科目：${subject}
+🛠️ 模式：${serviceTypeText}
+💰 費用：$${price} (須先付款)
+----------------
+🕒 預定開始：${fmtTime(startDate)}
+🏁 希望完成：${fmtTime(endDate)}
+📄 題數：共 ${selectedFilesCount} 題
+----------------
+我已閱讀規範，並準備好將題目照片傳送給老師。請提供付款帳號，謝謝！`;
+
+            document.getElementById('addFriendLink').href = `https://line.me/ti/p/~${MY_LINE_ID}`;
+            document.getElementById('lineLink').href = `https://line.me/R/msg/text/?${encodeURIComponent(lineMsg)}`;
+
+            // 顯示並滑動
+            const resultCard = document.getElementById('orderResult');
+            resultCard.style.display = 'block';
+            resultCard.scrollIntoView({behavior: "smooth"});
+        }
+
+        // ================= 分頁切換 =================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            const index = tabName === 'booking' ? 0 : tabName === 'rules' ? 1 : 2;
+            document.querySelectorAll('.nav-item')[index].classList.add('active');
+        }
+    </script>
+</body>
+</html>
